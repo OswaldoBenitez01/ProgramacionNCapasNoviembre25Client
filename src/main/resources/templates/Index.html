@@ -226,18 +226,15 @@
                     cancelButtonText: "Cancelar"
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        //window.location.href = "http://localhost:8080/api/usuario/" + IdUsuario;
                         $.ajax({
                             url: "http://localhost:8080/api/usuario/" + IdUsuario,
                             method: 'DELETE',
                             dataType: 'json',
                             success: function (data, textStatus, jqXHR) {
-                                if (data.Correct) {
-                                    Toast.fire({
-                                        icon: "success",
-                                        title: "Se elimino el usuario"
-                                    });
-                                }
+                                Toast.fire({
+                                    icon: "success",
+                                    title: "Se elimino el usuario"
+                                });
                             },
                             error: function (jqXHR, textStatus, errorThrown) {
                                 Toast.fire({

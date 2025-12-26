@@ -65,7 +65,7 @@ public class UsuarioController {
             Result result = responseEntity.getBody();
             model.addAttribute("Usuarios", result.Objects);
             model.addAttribute("usuarioBusqueda", new Usuario());
-        //Roles
+            //Roles
             Result resultRoles = responseEntityRoles.getBody();
             model.addAttribute("Roles", resultRoles.Objects);
         } else if (responseEntity.getStatusCode().value() == 500){
