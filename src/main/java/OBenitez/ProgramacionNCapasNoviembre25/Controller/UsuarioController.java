@@ -49,29 +49,84 @@ public class UsuarioController {
     public String GetAll(Model model){ 
         RestTemplate restTemplate = new RestTemplate(); 
 
-        ResponseEntity<Result<Usuario>> responseEntity = restTemplate.exchange(urlBase + "/usuario",
+        try {
+            ResponseEntity<Result<Usuario>> responseEntity = restTemplate.exchange(urlBase + "/usuario",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 new ParameterizedTypeReference<Result<Usuario>>() {
-        });
-        
-        ResponseEntity<Result<Rol>> responseEntityRoles = restTemplate.exchange(urlBase + "/rol",
+            });
+
+            ResponseEntity<Result<Rol>> responseEntityRoles = restTemplate.exchange(urlBase + "/rol",
+                    HttpMethod.GET,
+                    HttpEntity.EMPTY,
+                    new ParameterizedTypeReference<Result<Rol>>() {
+            });
+
+            if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                Result result = responseEntity.getBody();
+                model.addAttribute("Usuarios", result.Objects);
+            } else{
+                model.addAttribute("Usuarios", new ArrayList<>());
+            }
+            if (responseEntityRoles.getStatusCode().is2xxSuccessful()) {
+                Result resultRoles = responseEntityRoles.getBody();
+                model.addAttribute("Roles", resultRoles.Objects);
+            } else{
+                model.addAttribute("Roles", new ArrayList<>());
+            }
+            
+            model.addAttribute("usuarioBusqueda", new Usuario());
+        } catch (Exception ex) {
+            model.addAttribute("Usuarios", new ArrayList<>());
+            model.addAttribute("Roles", new ArrayList<>());
+            model.addAttribute("usuarioBusqueda", new Usuario());
+        }
+
+        return "Index";
+    }
+    
+    @GetMapping("detail/{IdUsuario}")
+    public String Detail(@PathVariable("IdUsuario") int IdUsuario, Model model){
+    
+        RestTemplate restTemplate = new RestTemplate(); 
+
+        try {
+            ResponseEntity<Result<Usuario>> responseEntity = restTemplate.exchange(urlBase + "/usuario/" + IdUsuario,
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
-                new ParameterizedTypeReference<Result<Rol>>() {
-        });
+                new ParameterizedTypeReference<Result<Usuario>>() {
+            });
 
-        if (responseEntity.getStatusCode().value() == 200) {
-            Result result = responseEntity.getBody();
-            model.addAttribute("Usuarios", result.Objects);
-            model.addAttribute("usuarioBusqueda", new Usuario());
-            //Roles
-            Result resultRoles = responseEntityRoles.getBody();
-            model.addAttribute("Roles", resultRoles.Objects);
-        } else if (responseEntity.getStatusCode().value() == 500){
-            // mensaje de error.
+            if (responseEntity.getStatusCode().is2xxSuccessful()) {
+                Result result = responseEntity.getBody();
+                model.addAttribute("Usuario", result.Object);
+                try {
+                    ResponseEntity<Result<Rol>> responseEntityRoles = restTemplate.exchange(urlBase + "/rol",
+                        HttpMethod.GET,
+                        HttpEntity.EMPTY,
+                        new ParameterizedTypeReference<Result<Rol>>() {
+                    });
+                    ResponseEntity<Result<Pais>> responseEntityPais = restTemplate.exchange(urlBase + "/pais",
+                        HttpMethod.GET,
+                        HttpEntity.EMPTY,
+                        new ParameterizedTypeReference<Result<Pais>>() {
+                    });
+                    
+                    if (responseEntityRoles.getBody() != null) {
+                        model.addAttribute("Roles", responseEntityRoles.getBody().Objects);
+                    }
+                    if (responseEntityPais.getBody() != null) {
+                        model.addAttribute("Paises", responseEntityPais.getBody().Objects);
+                    }
+                } catch (Exception ex) {
+                    model.addAttribute("Roles", new ArrayList<>());
+                    model.addAttribute("Paises", new ArrayList<>());
+                }
+            } 
+        } catch (Exception ex) {
+            return "redirect:/usuario";
         }
-        return "Index";
+        return "UsuarioDetail";
     }
     
     @GetMapping("form")
@@ -130,31 +185,7 @@ public class UsuarioController {
 //   
 //    }
 //    
-    @GetMapping("detail/{IdUsuario}")
-    public String Detail(@PathVariable("IdUsuario") int IdUsuario, Model model){
     
-        RestTemplate restTemplate = new RestTemplate(); 
-
-        ResponseEntity<Result<Usuario>> responseEntity = restTemplate.exchange(urlBase + "/usuario/" + IdUsuario,
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                new ParameterizedTypeReference<Result<Usuario>>() {
-        });
-
-        if (responseEntity.getStatusCode().value() == 200) {
-            Result result = responseEntity.getBody();
-            model.addAttribute("Usuario", result.Object);
-//        Result resultPais = paisDAOImplementation.GetAll();
-//        model.addAttribute("Paises", resultPais.Objects);
-//        
-//        Result resultRoles = rolDAOImplementation.GetALl();
-//        model.addAttribute("Roles", resultRoles.Objects);
-        } else if (responseEntity.getStatusCode().value() == 500){
-            // mensaje de error.
-        }
-
-        return "UsuarioDetail";
-    }
     
 //    @GetMapping("delete/{IdUsuario}")
 //    public String Delete(@PathVariable("IdUsuario") int IdUsuario, RedirectAttributes redirectAttributes){

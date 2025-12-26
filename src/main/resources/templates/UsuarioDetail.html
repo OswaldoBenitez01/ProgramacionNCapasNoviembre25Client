@@ -35,23 +35,23 @@
             .image-container:hover .overlay {
                 opacity: 1;
             }
-
         </style>
     </head>
     <body class="container py-5">
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
-            <h4>Informacion del Usuario</h4>
+            <h4>Información del Usuario</h4>
             <a th:href="@{/usuario}" class="btn btn-secondary btn-sm">Volver</a>
         </div>
-        
-        
-
         
         <!-- INFO BASICA USUARIO -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="me-4">
                 <div class="image-container position-relative">
-                    <img class="object-fit-cover" th:src="${Usuario.Imagen != null ? 'data:image/*;base64,' + Usuario.Imagen : 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}" alt="Description" width="150" height="150">
+                    <img class="object-fit-cover" 
+                         th:src="${Usuario.Imagen != null ? 'data:image/*;base64,' + Usuario.Imagen : 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'}" 
+                         alt="Foto de perfil" 
+                         width="150" 
+                         height="150">
                     <div class="overlay">
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editarImagen">
                             Editar
@@ -63,12 +63,12 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <h3 class="text-primary mb-3 fw-bold"
-                            th:text="|${Usuario.Nombre}  ${Usuario.ApellidoPaterno} ${Usuario.ApellidoMaterno}|">
+                            th:text="|${Usuario.Nombre} ${Usuario.ApellidoPaterno} ${Usuario.ApellidoMaterno ?: ''}|">
                         </h3>
                         <button class="btn btn-primary btn-sm mb-3" 
                                 data-bs-toggle="modal" 
                                 data-bs-target="#modalEditarUsuario">
-                            <i class="bi bi-pencil"></i>&nbsp;&nbsp;&nbsp;Editar Informacion
+                            <i class="bi bi-pencil"></i>&nbsp;&nbsp;&nbsp;Editar Información
                         </button>
                     </div>
 
@@ -82,9 +82,18 @@
                             <p class="mb-1"><strong>Email: </strong><span th:text="${Usuario.Email}"></span></p>
                         </div>
                         <div class="col-md-6">
-                            <p class="mb-1"><strong>Telefono: </strong><span th:text="${Usuario.Telefono}"></span></p>
-                            <p class="mb-1"><strong>CURP:  </strong><span th:text="${Usuario.Curp}"></span></p>
-                            <p class="mb-1"><strong>Fecha Nacimiento:  </strong><span th:text="${Usuario.FechaNacimiento}"></span></p>
+                            <p class="mb-1"><strong>Teléfono: </strong>
+                                <span th:if="${Usuario.Telefono != null}" th:text="${Usuario.Telefono}"></span>
+                                <span th:unless="${Usuario.Telefono != null}" class="text-muted">No registrado</span>
+                            </p>
+                            <p class="mb-1"><strong>CURP: </strong>
+                                <span th:if="${Usuario.Curp != null}" th:text="${Usuario.Curp}"></span>
+                                <span th:unless="${Usuario.Curp != null}" class="text-muted">No registrado</span>
+                            </p>
+                            <p class="mb-1"><strong>Fecha Nacimiento: </strong>
+                                <span th:if="${Usuario.FechaNacimiento != null}" th:text="${Usuario.FechaNacimiento}"></span>
+                                <span th:unless="${Usuario.FechaNacimiento != null}" class="text-muted">No registrada</span>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -97,25 +106,32 @@
             <button class="btn btn-success btn-sm"
                     data-bs-toggle="modal" 
                     data-bs-target="#modalAgregarDireccion">
-                <i class="bi bi-plus"></i>&nbsp;&nbsp;Agregar Direccion
+                <i class="bi bi-plus"></i>&nbsp;&nbsp;Agregar Dirección
             </button>
         </div>
         
-        <div th:if="${Usuario.Direcciones == null}" class="alert text-body-secondary small">
-            Sin direcciones registradas
+        <div th:if="${Usuario.Direcciones == null || #lists.isEmpty(Usuario.Direcciones)}" 
+             class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Sin direcciones registradas
         </div>
         
-        <ul class="list-unstyled" th:unless="${Usuario.Direcciones == null}">
-            <li th:each="direccion : ${Usuario.Direcciones}">
+        <ul class="list-group" th:unless="${Usuario.Direcciones == null || #lists.isEmpty(Usuario.Direcciones)}">
+            <li class="list-group-item" th:each="direccion : ${Usuario.Direcciones}">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <strong th:text="|${direccion.Calle} ${direccion.NumeroInterior} ${direccion.NumeroExterior}|"></strong>
+                        <strong th:text="|${direccion.Calle} ${direccion.NumeroInterior ?: 'S/N'} ${direccion.NumeroExterior}|"></strong>
                         <br>
-                        <small class="text-muted">
-                            Col. <span th:text="${direccion.Colonia.Nombre}"></span> -
-                            <span th:text="${direccion.Colonia.Municipio.Nombre}"></span>, 
-                            <span th:text="${direccion.Colonia.Municipio.Estado.Nombre}"></span>, 
-                            <span th:text="${direccion.Colonia.Municipio.Estado.Pais.Nombre}"></span>
+                        <small class="text-muted" th:if="${direccion.Colonia != null}">
+                            Col. <span th:text="${direccion.Colonia.Nombre}"></span>
+                            <span th:if="${direccion.Colonia.Municipio != null}">
+                                - <span th:text="${direccion.Colonia.Municipio.Nombre}"></span>
+                            </span>
+                            <span th:if="${direccion.Colonia.Municipio != null && direccion.Colonia.Municipio.Estado != null}">
+                                , <span th:text="${direccion.Colonia.Municipio.Estado.Nombre}"></span>
+                            </span>
+                            <span th:if="${direccion.Colonia.Municipio != null && direccion.Colonia.Municipio.Estado != null && direccion.Colonia.Municipio.Estado.Pais != null}">
+                                , <span th:text="${direccion.Colonia.Municipio.Estado.Pais.Nombre}"></span>
+                            </span>
                         </small>
                     </div>
                     
@@ -129,12 +145,12 @@
                                 data-bs-target="#modalEditarDireccion"
                                 th:attr="data-usuario=${Usuario.IdUsuario},
                                          data-direccion=${direccion.IdDireccion},
-                                         data-pais=${direccion.Colonia.Municipio.Estado.Pais.IdPais},
-                                         data-estado=${direccion.Colonia.Municipio.Estado.IdEstado},
-                                         data-municipio=${direccion.Colonia.Municipio.IdMunicipio},
-                                         data-colonia=${direccion.Colonia.IdColonia},
+                                         data-pais=${direccion.Colonia?.Municipio?.Estado?.Pais?.IdPais ?: 0},
+                                         data-estado=${direccion.Colonia?.Municipio?.Estado?.IdEstado ?: 0},
+                                         data-municipio=${direccion.Colonia?.Municipio?.IdMunicipio ?: 0},
+                                         data-colonia=${direccion.Colonia?.IdColonia ?: 0},
                                          data-calle=${direccion.Calle},
-                                         data-num-int=${direccion.NumeroInterior},
+                                         data-num-int=${direccion.NumeroInterior ?: ''},
                                          data-num-ext=${direccion.NumeroExterior}">
                             <i class="bi bi-pencil"></i>
                         </button>
@@ -157,7 +173,7 @@
                         <div class="modal-body">
                             <input type="hidden" name="IdUsuario" th:value="${Usuario.IdUsuario}">
                             <input type="hidden" name="Direcciones[0].IdDireccion" value="-1">
-                            <input type="hidden" th:field="${Usuario.Status}" value="${Usuario.Status}">
+                            <input type="hidden" name="Status" th:value="${Usuario.Status}">
                             
                             <div class="row">
                                 <div class="col-md-4 mb-3">
@@ -189,11 +205,11 @@
                                            th:value="${Usuario.FechaNacimiento}">
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label class="form-label"><i class="bi bi-gender-ambiguous"></i> Genero</label>
-                                    <select class="form-select" name="Sexo" th:field="${Usuario.Sexo}">
-                                        <option value="N">No definido</option>
-                                        <option value="H">Hombre</option>
-                                        <option value="M">Mujer</option>
+                                    <label class="form-label"><i class="bi bi-gender-ambiguous"></i> Género</label>
+                                    <select class="form-select" name="Sexo">
+                                        <option value="N" th:selected="${Usuario.Sexo == 'N'}">No definido</option>
+                                        <option value="H" th:selected="${Usuario.Sexo == 'H'}">Hombre</option>
+                                        <option value="M" th:selected="${Usuario.Sexo == 'M'}">Mujer</option>
                                     </select>
                                 </div>
                             </div>
@@ -211,7 +227,7 @@
                                         <option th:each="rol : ${Roles}"
                                                 th:text="${rol.Nombre}"
                                                 th:value="${rol.IdRol}"
-                                                th:selected="${rol.IdRol == Usuario.Rol.IdRol}">
+                                                th:selected="${Usuario.Rol != null && rol.IdRol == Usuario.Rol.IdRol}">
                                         </option>
                                     </select>
                                 </div>
@@ -224,7 +240,7 @@
                             
                             <div class="row">
                                 <div class="col-md-3 mb-3">
-                                    <label class="form-label"><i class="bi bi-telephone-fill"></i> Telefono</label>
+                                    <label class="form-label"><i class="bi bi-telephone-fill"></i> Teléfono</label>
                                     <input type="tel" class="form-control" name="Telefono" 
                                            th:value="${Usuario.Telefono}" maxlength="10">
                                 </div>
@@ -269,7 +285,7 @@
                                     <label class="form-label"><i class="bi bi-globe-americas"></i> País</label>
                                     <select id="add-pais" class="form-select" 
                                             name="Direcciones[0].Colonia.Municipio.Estado.Pais.IdPais" required>
-                                        <option value="0">Selecciona un Pais</option>
+                                        <option value="0">Selecciona un País</option>
                                         <option th:each="pais : ${Paises}" 
                                                 th:text="${pais.Nombre}" 
                                                 th:value="${pais.IdPais}">
@@ -303,7 +319,7 @@
                             </div>
                             
                             <div class="row">
-                                <div class="col">
+                                <div class="col mb-3">
                                     <label class="form-label"><i class="bi bi-signpost"></i> Calle</label>
                                     <input type="text" class="form-control" name="Direcciones[0].Calle" required>
                                 </div>
@@ -349,7 +365,7 @@
                                     <label class="form-label"><i class="bi bi-globe-americas"></i> País</label>
                                     <select id="edit-pais" class="form-select" 
                                             name="Direcciones[0].Colonia.Municipio.Estado.Pais.IdPais" required>
-                                        <option value="0">Selecciona un Pais</option>
+                                        <option value="0">Selecciona un País</option>
                                         <option th:each="pais : ${Paises}" 
                                                 th:text="${pais.Nombre}" 
                                                 th:value="${pais.IdPais}">
@@ -383,7 +399,7 @@
                             </div>
                             
                             <div class="row">
-                                <div class="col">
+                                <div class="col mb-3">
                                     <label class="form-label"><i class="bi bi-signpost"></i> Calle</label>
                                     <input type="text" class="form-control" id="edit-calle" 
                                            name="Direcciones[0].Calle" required>
@@ -412,12 +428,13 @@
             </div>
         </div>
         
-        <div class="modal fade" id="editarImagen" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <!-- MODAL EDITAR IMAGEN -->
+        <div class="modal fade" id="editarImagen" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="staticBackdropLabel">Selecciona una foto</h1>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h1 class="modal-title fs-5">Selecciona una foto</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <form th:action="@{/Usuario/updatePhoto}" method="post" enctype="multipart/form-data">
@@ -429,15 +446,17 @@
                                        id="inputImagenUsuario" 
                                        accept=".png, .jpeg, .jpg"
                                        aria-describedby="photoHelp">
-                                <button th:if="${Usuario.Imagen != null}" class="btn btn-danger" type="button" th:onclick="|eliminarFoto(${Usuario.IdUsuario})|">
+                                <button th:if="${Usuario.Imagen != null}" 
+                                        class="btn btn-danger" 
+                                        type="button" 
+                                        th:onclick="|eliminarFoto(${Usuario.IdUsuario})|">
                                     <i class="bi bi-trash-fill"></i>
                                 </button>
                                 <button class="btn btn-primary" type="submit">
                                     <i class="bi bi-cloud-upload"></i> Actualizar
                                 </button>
-                                
                             </div>
-                            <div id="photoHelp" class="form-text ps-1">Tu imagen debe ser un formato valido. (PNG, JPG, JPEG)</div>
+                            <div id="photoHelp" class="form-text ps-1">Tu imagen debe ser un formato válido (PNG, JPG, JPEG)</div>
                         </form>
                     </div>
                 </div>
@@ -477,11 +496,23 @@
             }
             
             function eliminarFoto(IdUsuario){
-                window.location.href = '/Usuario/deletePhoto/' + IdUsuario
+                Swal.fire({
+                    title: '¿Eliminar foto?',
+                    text: 'Se restaurará la imagen por defecto',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = '/Usuario/deletePhoto/' + IdUsuario;
+                    }
+                });
             }
             
             document.getElementById('modalEditarDireccion').addEventListener('show.bs.modal', function(event) {
-                
                 const boton = event.relatedTarget;
                 
                 document.getElementById('edit-idusuario').value = boton.getAttribute('data-usuario');
@@ -515,8 +546,7 @@
                     return;
                 }
                 
-                // Carga estados
-                $.get('/Usuario/getEstadosByPais/' + idPais, function(data) {
+                $.get('http://localhost:8080/api/estado/pais/' + idPais, function(data) {
                     $('#add-estado').html('<option value="0">Selecciona un Estado</option>');
                     data.Objects.forEach(function(estado) {
                         $('#add-estado').append('<option value="' + estado.idEstado + '">' + estado.nombre + '</option>');
@@ -535,8 +565,7 @@
                     return;
                 }
                 
-                // Carga municipios
-                $.get('/Usuario/getMunicipiosByEstado/' + idEstado, function(data) {
+                $.get('http://localhost:8080/api/municipio/estado/' + idEstado, function(data) {
                     $('#add-municipio').html('<option value="0">Selecciona un Municipio</option>');
                     data.Objects.forEach(function(municipio) {
                         $('#add-municipio').append('<option value="' + municipio.idMunicipio + '">' + municipio.nombre + '</option>');
@@ -553,8 +582,7 @@
                     return;
                 }
                 
-                // Carga colonias
-                $.get('/Usuario/getColoniasByMunicipio/' + idMunicipio, function(data) {
+                $.get('http://localhost:8080/api/colonia/municipio/' + idMunicipio, function(data) {
                     $('#add-colonia').html('<option value="0">Selecciona una Colonia</option>');
                     data.Objects.forEach(function(colonia) {
                         $('#add-colonia').append('<option value="' + colonia.idColonia + '">' + colonia.nombre + '</option>');
@@ -575,8 +603,7 @@
                     return;
                 }
                 
-                // Carga estados
-                $.get('/Usuario/getEstadosByPais/' + idPais, function(data) {
+                $.get('http://localhost:8080/api/estado/pais/' + idPais, function(data) {
                     $('#edit-estado').html('<option value="0">Selecciona un Estado</option>');
                     data.Objects.forEach(function(estado) {
                         const selected = estado.idEstado == estadoSeleccionado ? 'selected' : '';
@@ -599,8 +626,7 @@
                     return;
                 }
                 
-                // Carga municipios
-                $.get('/Usuario/getMunicipiosByEstado/' + idEstado, function(data) {
+                $.get('http://localhost:8080/api/municipio/estado/' + idEstado, function(data) {
                     $('#edit-municipio').html('<option value="0">Selecciona un Municipio</option>');
                     data.Objects.forEach(function(municipio) {
                         const selected = municipio.idMunicipio == municipioSeleccionado ? 'selected' : '';
@@ -622,8 +648,7 @@
                     return;
                 }
                 
-                // Cargar colonias
-                $.get('/Usuario/getColoniasByMunicipio/' + idMunicipio, function(data) {
+                $.get('http://localhost:8080/api/colonia/municipio/' + idMunicipio, function(data) {
                     $('#edit-colonia').html('<option value="0">Selecciona una Colonia</option>');
                     data.Objects.forEach(function(colonia) {
                         const selected = colonia.idColonia == coloniaSeleccionada ? 'selected' : '';
