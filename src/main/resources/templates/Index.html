@@ -28,7 +28,7 @@
         <div class="p-4 mb-4">
             <h5 class="mb-3"> Buscar Usuario</h5>
             
-            <form th:action="@{/Usuario/busqueda}" th:object="${usuarioBusqueda}" method="post">
+            <form th:action="/usuario/busqueda" th:object="${usuarioBusqueda}" method="post">
                 <div class="row g-3">
                     <div class="col-md-3">
                         <input type="text"
