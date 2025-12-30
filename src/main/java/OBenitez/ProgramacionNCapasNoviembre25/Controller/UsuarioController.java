@@ -18,10 +18,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -85,6 +89,56 @@ public class UsuarioController {
         return "Index";
     }
     
+    @PostMapping("busqueda")
+    public String Busqueda(@ModelAttribute("usuario") Usuario usuario, Model model){
+        Result result = new Result();
+        RestTemplate restTemplate = new RestTemplate(); 
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            HttpEntity<Usuario> requestEntity = new HttpEntity<>(usuario, headers);
+
+            ResponseEntity<Result<Usuario>> responseEntityBusqueda = restTemplate.exchange(
+                    urlBase + "/usuario/busqueda",
+                    HttpMethod.POST,
+                    requestEntity,
+                    new ParameterizedTypeReference<Result<Usuario>>() {}
+            );
+            
+            ResponseEntity<Result<Rol>> responseEntityRoles = restTemplate.exchange(urlBase + "/rol",
+                    HttpMethod.GET,
+                    HttpEntity.EMPTY,
+                    new ParameterizedTypeReference<Result<Rol>>() {
+            });
+            
+            if (responseEntityBusqueda.getStatusCode().is2xxSuccessful()) {
+                Result resultBusqueda = responseEntityBusqueda.getBody();
+                model.addAttribute("Usuarios", resultBusqueda.Objects);
+            } else{
+                model.addAttribute("Usuarios", new ArrayList<>());
+            }
+            if (responseEntityRoles.getStatusCode().is2xxSuccessful()) {
+                Result resultRoles = responseEntityRoles.getBody();
+                model.addAttribute("Roles", resultRoles.Objects);
+            } else{
+                model.addAttribute("Roles", new ArrayList<>());
+            }
+            
+            model.addAttribute("usuarioBusqueda", usuario);
+        } catch (Exception ex) {
+            result.Correct = false;
+            result.ErrorMessage = ex.getLocalizedMessage();
+            result.Object = "No pudo procesarse la busqueda";
+            result.ex = ex;
+            model.addAttribute("Usuarios", new ArrayList<>());
+            model.addAttribute("Roles", new ArrayList<>());
+            model.addAttribute("usuarioBusqueda", new Usuario());
+        }
+        
+        return "Index";
+    }
+    
     @GetMapping("detail/{IdUsuario}")
     public String Detail(@PathVariable("IdUsuario") int IdUsuario, Model model){
     
@@ -129,6 +183,106 @@ public class UsuarioController {
         return "UsuarioDetail";
     }
     
+    @GetMapping("deleteAddress/{IdDireccion}/{IdUsuario}")
+    public String DeleteAddress(@PathVariable("IdDireccion") int IdDireccion, @PathVariable("IdUsuario") int IdUsuario, RedirectAttributes redirectAttributes){
+        RestTemplate restTemplate = new RestTemplate(); 
+        Result result = new Result();
+        try {
+            ResponseEntity<Result<Direccion>> responseEntityDeleteAddress = restTemplate.exchange(urlBase + "/direccion/" + IdDireccion,
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<Result<Direccion>>() {
+            });
+        
+            if (responseEntityDeleteAddress.getStatusCode().is2xxSuccessful()) {
+                result.Correct = true;
+                result.Object = "La direccion fue eliminada";
+            } else {
+                result.Correct = false;
+                result.Object = "No fue posible eliminar la direccion :c";
+            }
+        } catch (Exception ex) {
+            result.Correct = false;
+            result.Object = ex.getLocalizedMessage();
+            result.ex = ex;
+        }
+        
+        redirectAttributes.addFlashAttribute("resultDeleteAddress", result);
+        return "redirect:/usuario/detail/"+IdUsuario;
+    }
+    
+    @PostMapping("/updatePhoto")
+    public String updatePhoto(@ModelAttribute Usuario usuario,
+                              @RequestParam("imagenUsuario") MultipartFile imagenUsuario,
+                              RedirectAttributes redirectAttributes) {
+        RestTemplate restTemplate = new RestTemplate(); 
+        Result result = new Result();
+        
+        
+        if (imagenUsuario.isEmpty()) {
+            result.Correct = false;
+            result.Object = "No se seleccionó ninguna imagen";
+        } else {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            try {
+                String encodedString = Base64.getEncoder().encodeToString(imagenUsuario.getBytes());
+                HttpEntity<String> requestEntity = new HttpEntity<>(encodedString, headers);
+
+                ResponseEntity<Result> responseEntityUpdatePhoto = restTemplate.exchange(
+                        urlBase + "/usuario/"+usuario.getIdUsuario()+"/updatePhoto",
+                        HttpMethod.POST,
+                        requestEntity,
+                        new ParameterizedTypeReference<Result>() {}
+                );
+                if (responseEntityUpdatePhoto.getStatusCode().is2xxSuccessful()) {
+                    result.Correct = true;
+                    result.Object = "Se actualizó correctamente la foto";
+                } else {
+                    result.Correct = false;
+                    result.Object = "No se pudo actualizar la foto :c";
+                }
+            } catch (IOException ex) {
+                result.Correct = false;
+                result.ErrorMessage = ex.getLocalizedMessage();
+                result.Object = "No pudo procesarse la imagen";
+                result.ex = ex;
+            }
+        }
+        redirectAttributes.addFlashAttribute("resultUpdatePhoto", result);
+        return "redirect:/usuario/detail/" + usuario.getIdUsuario();
+    }
+
+    @PostMapping("deletePhoto/{IdUsuario}")
+    public String deletePhoto(@PathVariable int IdUsuario, RedirectAttributes redirectAttributes) {
+        RestTemplate restTemplate = new RestTemplate(); 
+        Result result = new Result();
+
+        try {
+            ResponseEntity<Result> responseEntityDeletePhoto = restTemplate.exchange(
+                    urlBase + "/usuario/" + IdUsuario + "/photo",
+                    HttpMethod.DELETE,
+                    null,
+                    new ParameterizedTypeReference<Result>() {}
+            );
+            if (responseEntityDeletePhoto.getStatusCode().is2xxSuccessful()) {
+                result.Correct = true;
+                result.Object = "Se eliminó correctamente la foto";
+            } else {
+                result.Correct = false;
+                result.Object = "No se pudo eliminar la foto :c";
+            }
+        } catch (Exception ex) {
+            result.Correct = false;
+            result.ErrorMessage = ex.getLocalizedMessage();
+            result.Object = "No se pudo eliminar la foto :c";
+            result.ex = ex;
+        }
+
+        redirectAttributes.addFlashAttribute("resultUpdatePhoto", result);
+        return "redirect:/usuario/detail/" + IdUsuario;
+    }
+    
     @GetMapping("form")
     public String Form(Model model){
         RestTemplate restTemplate = new RestTemplate(); 
@@ -157,222 +311,158 @@ public class UsuarioController {
         return "UsuarioForm";
     }
     
-//    @PostMapping("add")
-//    public String Add(Model model, @ModelAttribute("Usuario") Usuario usuario, @RequestParam("imagenUsuario") MultipartFile imagenUsuario, RedirectAttributes redirectAttributes) throws IOException{
-//        
-//        // AGREGAR USUARIO FULL INFO
-//        if (imagenUsuario.isEmpty()) {
-//            usuario.setImagen(null);
-//        } else {
-//            String encodedString = Base64.getEncoder().encodeToString(imagenUsuario.getBytes());
-//            usuario.setImagen(encodedString);
-//        }
-//        usuario.setStatus(1);
-//
-//        ModelMapper modelMapper = new ModelMapper();
-//        OBenitez.ProgramacionNCapasNoviembre25.JPA.Usuario usuarioJPA = modelMapper.map(usuario, OBenitez.ProgramacionNCapasNoviembre25.JPA.Usuario.class);
-//        Result result = usuarioJPADAOImplementation.Add(usuarioJPA);
-//
-//        //Result result = usuarioDAOImplementation.Add(usuario);
-//
-//        if(result.Correct){
-//            result.Object = "El usuario se agrego correctamente";
-//        } else{
-//            result.Object = "No fue posible agregar al usuario :c";
-//        }
-//        redirectAttributes.addFlashAttribute("resultAddUserFull", result);
-//        return "redirect:/Usuario";
-//   
-//    }
-//    
+    @PostMapping("add")
+    public String Add(Model model, @ModelAttribute("Usuario") Usuario usuario, @RequestParam("imagenUsuario") MultipartFile imagenUsuario, RedirectAttributes redirectAttributes) throws IOException{
+        RestTemplate restTemplate = new RestTemplate(); 
+        Result result = new Result();
+        // AGREGAR USUARIO FULL INFO
+        if (imagenUsuario.isEmpty()) {
+            usuario.setImagen(null);
+        } else {
+            String encodedString = Base64.getEncoder().encodeToString(imagenUsuario.getBytes());
+            usuario.setImagen(encodedString);
+        }
+        usuario.setStatus(1);
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Usuario> requestEntity = new HttpEntity<>(usuario, headers);
+
+            ResponseEntity<Result> responseEntityAddUser = restTemplate.exchange(
+                    urlBase + "/usuario",
+                    HttpMethod.POST,
+                    requestEntity,
+                    new ParameterizedTypeReference<Result>() {}
+            );
+            Result resultAddUser = responseEntityAddUser.getBody();
+
+            if (resultAddUser != null && responseEntityAddUser.getStatusCode().is2xxSuccessful()) {
+                result.Correct = true;
+                result.Object = "El usuario se agregó correctamente";
+            } else {
+                result.Correct = false;
+                result.Object = "No fue posible agregar al usuario";
+            }
+        } catch (Exception ex) {
+            result.Correct = false;
+            result.Object = "No fue posible agregar al usuario";
+            result.ErrorMessage = ex.getLocalizedMessage();
+            result.ex = ex;
+        }
+        redirectAttributes.addFlashAttribute("resultAddUserFull", result);
+        return "redirect:/usuario";
+    }
     
+    @PostMapping("formEditable")
+    public String Form(@ModelAttribute Usuario usuario, RedirectAttributes redirectAttributes){
+        RestTemplate restTemplate = new RestTemplate(); 
+        if (usuario.getDirecciones().get(0).getIdDireccion() == -1) {
+            //ACTUALIZAR USUARIO
+            Result result = new Result();
+            usuario.Direcciones.remove(0);
+            
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+
+                HttpEntity<Usuario> requestEntity = new HttpEntity<>(usuario, headers);
+
+                ResponseEntity<Result> responseEntityUpdateUser = restTemplate.exchange(
+                        urlBase + "/usuario",
+                        HttpMethod.PUT,
+                        requestEntity,
+                        new ParameterizedTypeReference<Result>() {}
+                );
+                Result resultUpdateUser = responseEntityUpdateUser.getBody();
+
+                if (resultUpdateUser != null && resultUpdateUser.Correct) {
+                    result.Correct = true;
+                    result.Object = "El usuario se actualizó correctamente";
+                } else {
+                    result.Correct = false;
+                    result.Object = "No fue posible actualizar al usuario";
+                }
+            } catch (Exception ex) {
+                result.Correct = false;
+                result.Object = "No fue posible actualizar al usuario";
+                result.ErrorMessage = ex.getLocalizedMessage();
+                result.ex = ex;
+            }
+
+            redirectAttributes.addFlashAttribute("resultEditUserBasic", result);
+            return "redirect:/usuario/detail/" + usuario.getIdUsuario();
+        }else if(usuario.Direcciones.get(0).getIdDireccion() == 0){
+//            AGREGA UNA DIRECCION NUEVA
+            Result result = new Result();
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                Direccion direccionNueva = usuario.Direcciones.get(0);
+                direccionNueva.Usuario = new Usuario();
+                direccionNueva.Usuario.setIdUsuario(usuario.getIdUsuario());
+                HttpEntity<Direccion> requestEntity = new HttpEntity<>(direccionNueva, headers);
+
+                ResponseEntity<Result> responseEntityAddAddress = restTemplate.exchange(
+                        urlBase + "/direccion",
+                        HttpMethod.POST,
+                        requestEntity,
+                        new ParameterizedTypeReference<Result>() {}
+                );
+                Result resultAddAddress = responseEntityAddAddress.getBody();
+
+                if (resultAddAddress != null && responseEntityAddAddress.getStatusCode().is2xxSuccessful()) {
+                    result.Correct = true;
+                    result.Object = "La direccion se agregó correctamente";
+                } else {
+                    result.Correct = false;
+                    result.Object = "No fue posible agregar la direccion";
+                }
+            } catch (Exception ex) {
+                result.Correct = false;
+                result.Object = "No fue posible agregar la direccion";
+                result.ErrorMessage = ex.getLocalizedMessage();
+                result.ex = ex;
+            }
+            redirectAttributes.addFlashAttribute("resultAddAddress", result);
+            return "redirect:/usuario/detail/"+usuario.getIdUsuario();
+        }else{
+//            ACTUALIZA UNA DIRECCION           
+            Result result = new Result();
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                Direccion dirreccion = usuario.Direcciones.get(0);
+                HttpEntity<Direccion> requestEntity = new HttpEntity<>(dirreccion, headers);
+
+                ResponseEntity<Result> responseEntityUpdateAddress = restTemplate.exchange(
+                        urlBase + "/direccion",
+                        HttpMethod.PUT,
+                        requestEntity,
+                        new ParameterizedTypeReference<Result>() {}
+                );
+                Result resultUpdateAddress = responseEntityUpdateAddress.getBody();
+
+                if (resultUpdateAddress != null && resultUpdateAddress.Correct) {
+                    result.Correct = true;
+                    result.Object = "La direccion se actualizó correctamente";
+                } else {
+                    result.Correct = false;
+                    result.Object = "No fue posible actualizar la direccion";
+                }
+            } catch (Exception ex) {
+                result.Correct = false;
+                result.Object = "No fue posible actualizar la direccion";
+                result.ErrorMessage = ex.getLocalizedMessage();
+                result.ex = ex;
+            }
+            redirectAttributes.addFlashAttribute("resultEditAddress", result);
+            return "redirect:/usuario/detail/"+usuario.getIdUsuario();
+        }
+    }
     
-//    @GetMapping("delete/{IdUsuario}")
-//    public String Delete(@PathVariable("IdUsuario") int IdUsuario, RedirectAttributes redirectAttributes){
-//    
-//        Result result = usuarioJPADAOImplementation.DeleteUserById(IdUsuario);
-//        
-//        if(result.Correct){
-//            result.Object = "El usuario con ID " + IdUsuario + " fue eliminado";
-//        } else{
-//            result.Object = "No fue posible eliminar al usuario :c";
-//        }
-//        
-//        redirectAttributes.addFlashAttribute("resultDelete", result);
-//        return "redirect:/Usuario";
-//    }
-//    
-//    @GetMapping("toogleStatus/{IdUsuario}/{Status}")
-//    @ResponseBody
-//    public Result ToggleStatus(@PathVariable("IdUsuario") int IdUsuario, @PathVariable("Status") int Status,RedirectAttributes redirectAttributes){
-//    
-//        Result result = usuarioJPADAOImplementation.UpdateStatusById(IdUsuario, Status);
-//        
-//        redirectAttributes.addFlashAttribute("resultDeleteSoft", result);
-//        return result;
-//    }
-//    
-//    @PostMapping("/updatePhoto")
-//    public String updatePhoto(@ModelAttribute Usuario usuario,
-//                              @RequestParam("imagenUsuario") MultipartFile imagenUsuario,
-//                              RedirectAttributes redirectAttributes) {
-//
-//        Result result = new Result();
-//
-//        try {
-//            if (imagenUsuario.isEmpty()) {
-//                result.Correct = false;
-//                result.Object = "No se seleccionó ninguna imagen";
-//            } else {
-//                String encodedString = Base64.getEncoder().encodeToString(imagenUsuario.getBytes());
-//                result = usuarioJPADAOImplementation.UpdatePhoto(usuario.getIdUsuario(), encodedString);
-//                result.Object = result.Correct ? "Se actualizó correctamente la foto" : "No se pudo actualizar la foto :c";
-//            }
-//        } catch (IOException ex) {
-//            result.Correct = false;
-//            result.ErrorMessage = ex.getLocalizedMessage();
-//            result.Object = "No se pudo actualizar la foto :c";
-//            result.ex = ex;
-//        }
-//
-//        redirectAttributes.addFlashAttribute("resultUpdatePhoto", result);
-//        return "redirect:/Usuario/detail/" + usuario.getIdUsuario();
-//    }
-//    @PostMapping("/deletePhoto")
-//    public String deletePhoto(@ModelAttribute Usuario usuario, RedirectAttributes redirectAttributes) {
-//
-//        Result result = new Result();
-//
-//        try {
-//            result = usuarioJPADAOImplementation.UpdatePhoto(usuario.getIdUsuario(), null);
-//            result.Object = result.Correct ? "Se elimino correctamente la foto" : "No se pudo eliminar la foto :c";
-//        } catch (Exception ex) {
-//            result.Correct = false;
-//            result.ErrorMessage = ex.getLocalizedMessage();
-//            result.Object = "No se pudo eliminar la foto :c";
-//            result.ex = ex;
-//        }
-//
-//        redirectAttributes.addFlashAttribute("resultUpdatePhoto", result);
-//        return "redirect:/Usuario/detail/" + usuario.getIdUsuario();
-//    }
-//    
-//    @GetMapping("deleteAddress/{IdDireccion}/{IdUsuario}")
-//    public String DeleteAddress(@PathVariable("IdDireccion") int IdDireccion, @PathVariable("IdUsuario") int IdUsuario, RedirectAttributes redirectAttributes){
-//
-//        Result result = usuarioJPADAOImplementation.DeleteAddressById(IdDireccion);
-//        
-//        if(result.Correct){
-//            result.Object = "La direccion fue eliminada";
-//        } else{
-//            result.Object = "No fue posible eliminar la direccion :c";
-//        }
-//        
-//        redirectAttributes.addFlashAttribute("resultDeleteAddress", result);
-//        return "redirect:/Usuario/detail/"+IdUsuario;
-//    }
-//    
-//    
-//    @GetMapping("getEstadosByPais/{idPais}")
-//    @ResponseBody // retorna un dato estructurado
-//    public Result EstadosByPais(@PathVariable("idPais") int idPais){
-//        Result result = estadoDAOImplementation.GetEstadosByPais(idPais);
-//        return result;
-//    }
-//    @GetMapping("getMunicipiosByEstado/{idEstado}")
-//    @ResponseBody // retorna un dato estructurado
-//    public Result MunicipiosByEstado(@PathVariable("idEstado") int idEstado){
-//        Result result = municipioDAOImplementation.GetMunicipiosByEstado(idEstado);
-//        return result;
-//    }
-//    @GetMapping("getColoniasByMunicipio/{idMunicipio}")
-//    @ResponseBody // retorna un dato estructurado
-//    public Result ColoniasByMunicipio(@PathVariable("idMunicipio") int idMunicipio){
-//        Result result = coloniaDAOImplementation.GetColoniasByMunicipio(idMunicipio);
-//        return result;
-//    }
-//    
-//    
-////    @GetMapping("/formEditable")
-////    public String Form(@RequestParam("IdUsuario") int IdUsuario, @RequestParam(required = false) Integer IdDireccion, Model model){
-////    
-////        if (IdDireccion == null) {
-////            // ==== EDITAR USUARIO
-////            Result result = usuarioDAOImplementation.GetByIdBasicInfo(IdUsuario);
-////            
-////            Usuario usuario = (Usuario) result.Object;
-////            usuario.Direcciones = new ArrayList<>();
-////            usuario.Direcciones.add(new Direccion());
-////            usuario.Direcciones.get(0).setIdDireccion(-1);
-////            model.addAttribute("Usuario", usuario);
-////            
-////            //Llenado de campos
-////            Result resultRol = rolDAOImplementation.GetALl();
-////            model.addAttribute("Roles", resultRol.Objects);
-////            Result resultPais = paisDAOImplementation.GetAll();
-////            model.addAttribute("Paises", resultPais.Objects);
-////
-////            return "UsuarioForm";
-////        } else if (IdDireccion == 0) {
-////            //AGREGAR DIRECCION
-////            Usuario usuario = new Usuario();
-////            usuario.setIdUsuario(IdUsuario);
-////            usuario.Direcciones = new ArrayList<>();
-////            usuario.Direcciones.add(new Direccion());
-////            model.addAttribute("Usuario", usuario);
-////            Result resultPais = paisDAOImplementation.GetAll();
-////            model.addAttribute("Paises", resultPais.Objects);
-////            
-////            return "UsuarioForm";
-////        } else {
-////            //EDITAR DIRECCION
-////            Result result = usuarioDAOImplementation.GetAddressById(IdUsuario,IdDireccion);
-////            model.addAttribute("Usuario", result.Object);
-////            Result resultPais = paisDAOImplementation.GetAll();
-////            model.addAttribute("Paises", resultPais.Objects);
-////            return "UsuarioForm";
-////        }
-////    
-////    }
-//    
-//    @PostMapping("formEditable")
-//    public String Form(@ModelAttribute Usuario usuario, RedirectAttributes redirectAttributes){
-//    
-//        if(usuario.Direcciones.get(0).getIdDireccion() == -1){
-//            
-//            //ACTUALIZAR INFORMACION BASICA USUARIO
-//            Result result = usuarioJPADAOImplementation.UpdateBasicById(usuario);
-//            if(result.Correct){
-//                result.Object = "El usuario se actualizo correctamente";
-//            } else{
-//                result.Object = "No fue posible actualizar al usuario :c";
-//            }
-//            redirectAttributes.addFlashAttribute("resultEditUserBasic", result);
-//            return "redirect:/Usuario/detail/"+usuario.getIdUsuario();
-//            
-//        }else if(usuario.Direcciones.get(0).getIdDireccion() == 0){
-//            //AGREGA UNA DIRECCION NUEVA
-//            Result result = usuarioJPADAOImplementation.AddAddressById(usuario);
-//            if(result.Correct){
-//                result.Object = "La direccion se agrego correctamente";
-//            } else{
-//                result.Object = "No fue posible agregar la direccion :c";
-//            }
-//            redirectAttributes.addFlashAttribute("resultAddAddress", result);
-//            return "redirect:/Usuario/detail/"+usuario.getIdUsuario();
-//        }else{
-//            //ACTUALIZA UNA DIRECCION           
-//            Result result = usuarioJPADAOImplementation.UpdateAddressById(usuario);            
-//            if(result.Correct){
-//                result.Object = "La direccion se actualizo correctamente";
-//            } else{
-//                result.Object = "No fue posible actualizar la direccion :c";
-//            }
-//            redirectAttributes.addFlashAttribute("resultEditAddress", result);
-//            return "redirect:/Usuario/detail/"+usuario.getIdUsuario();
-//        }
-//    }
-//    
+ 
+    
 //    @GetMapping("CargaMasiva")
 //    public String CargaMsiva(){
 //        return "CargaMasiva";
@@ -611,25 +701,5 @@ public class UsuarioController {
 //        }
 //    }
 //    
-//    @PostMapping("busqueda")
-//    public String Busqueda(@ModelAttribute("usuario") Usuario usuario, Model model){
-//        
-//        Result result = usuarioJPADAOImplementation.BusquedaUserWithAddress(usuario);
-//        
-//        if (!result.Correct) {
-//            result = usuarioJPADAOImplementation.GetAll();
-//        }
-//        
-//        if (result.Objects == null || result.Objects.isEmpty()) {
-//            model.addAttribute("mensajeBusqueda", true);
-//        }
-//        
-//        model.addAttribute("Usuarios", result.Objects);
-//        model.addAttribute("usuarioBusqueda", usuario);
-//        
-//        Result resultRoles = rolDAOImplementation.GetALl();
-//        model.addAttribute("Roles", resultRoles.Objects);
-//        
-//        return "Index";
-//    }
+//    
 }
