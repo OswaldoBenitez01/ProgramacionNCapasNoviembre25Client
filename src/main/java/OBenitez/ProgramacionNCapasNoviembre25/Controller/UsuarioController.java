@@ -7,6 +7,7 @@ import OBenitez.ProgramacionNCapasNoviembre25.ML.Result;
 import OBenitez.ProgramacionNCapasNoviembre25.ML.Rol;
 import OBenitez.ProgramacionNCapasNoviembre25.ML.Usuario;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -301,7 +303,12 @@ public class UsuarioController {
     }
     
     @PostMapping("add")
-    public String Add(Model model, @ModelAttribute("Usuario") Usuario usuario, @RequestParam("imagenUsuario") MultipartFile imagenUsuario, RedirectAttributes redirectAttributes) throws IOException{
+    public String Add(@Valid @ModelAttribute("Usuario") Usuario usuario, BindingResult bindingResult, Model model, @RequestParam("imagenUsuario") MultipartFile imagenUsuario, RedirectAttributes redirectAttributes) throws IOException{
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("Usuario", usuario);
+            return "UsuarioForm"; 
+        }
+        
         RestTemplate restTemplate = new RestTemplate(); 
         Result result = new Result();
         // AGREGAR USUARIO FULL INFO

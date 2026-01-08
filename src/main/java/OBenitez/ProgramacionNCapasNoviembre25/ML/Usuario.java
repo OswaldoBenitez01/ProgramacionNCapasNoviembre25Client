@@ -1,5 +1,8 @@
 package OBenitez.ProgramacionNCapasNoviembre25.ML;
 
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.sql.Date;
 import java.util.List;
 
@@ -7,7 +10,12 @@ public class Usuario {
     private Integer IdUsuario;
     
     private String Username;
+    
+    @NotEmpty(message = "El campo es obligatorio.")
+    @Size(min=3,max=25, message = "Debe contener al menos 3 caracteres y 25 como maximo.")
+    @Pattern(regexp = "(^[A-Za-z]{0,12})([ ]{0,1})([A-Za-z]{0,12})", message = "El nombre no debe contener mas de un espacio, tener maximo 12 letras por nombre y minimo 3")
     private String Nombre;
+    
     private String ApellidoPaterno;
     private String ApellidoMaterno;
     private String Email;
